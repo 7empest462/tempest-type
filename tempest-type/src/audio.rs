@@ -2,6 +2,7 @@
 // Licensed under the Tempest Type Source-Available License.
 // See the LICENSE file in the repository root for full details.
 
+use crate::error::TempestError;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Sample, SampleFormat, StreamConfig};
 use std::sync::{Arc, Mutex};
@@ -23,88 +24,98 @@ impl AudioRecorder {
         }
     }
 
-    pub fn start_recording(&mut self) -> anyhow::Result<()> {
+    pub fn start_recording(&mut self) -> Result<(), TempestError> {
         let host = cpal::default_host();
         let device = host
             .default_input_device()
-            .ok_or_else(|| anyhow::anyhow!("No input device available"))?;
+            .ok_or_else(|| TempestError::AudioError("No input device available".to_string()))?;
 
-        let config = device.default_input_config()?;
+        let config = device.default_input_config().map_err(|e| TempestError::AudioError(e.to_string()))?;
         let sample_format = config.sample_format();
-        self.sample_rate = config.sample_rate().into();
+        self.sample_rate = config.sample_rate();
         self.channels = config.channels();
-        
-        let stream_config: StreamConfig = config.clone().into();
-        
-        #[allow(deprecated)]
-        let device_name = host.default_input_device().and_then(|d| d.name().ok()).unwrap_or_else(|| "Unknown".to_string());
+
+        let stream_config: StreamConfig = config.into();
+
+        let device_name = host
+            .default_input_device()
+            .map(|d| d.to_string())
+            .unwrap_or_else(|| "Unknown".to_string());
         println!("🎤 Using audio device: {:?}", device_name);
-        println!("📊 Format: {:?}, Rate: {}Hz, Channels: {}", sample_format, self.sample_rate, self.channels);
+        println!(
+            "📊 Format: {:?}, Rate: {}Hz, Channels: {}",
+            sample_format, self.sample_rate, self.channels
+        );
 
         // Ensure buffer is empty
         {
-            let mut buf = self.buffer.lock().expect("Failed to lock audio buffer (mutex poisoned)");
+            let mut buf = self
+                .buffer
+                .lock()
+                .expect("Failed to lock audio buffer (mutex poisoned)");
             buf.clear();
         }
 
         let buffer_clone = Arc::clone(&self.buffer);
-        
+
         let stream = match sample_format {
-            SampleFormat::F32 => {
-                device.build_input_stream(
-                    &stream_config,
-                    move |data: &[f32], _: &_| {
-                        if let Ok(mut buf) = buffer_clone.lock() {
-                            buf.extend_from_slice(data);
+            SampleFormat::F32 => device.build_input_stream(
+                stream_config,
+                move |data: &[f32], _: &_| {
+                    if let Ok(mut buf) = buffer_clone.lock() {
+                        buf.extend_from_slice(data);
+                    }
+                },
+                |err| eprintln!("Audio stream error: {}", err),
+                None,
+            ).map_err(|e| TempestError::AudioError(e.to_string()))?,
+            SampleFormat::I16 => device.build_input_stream(
+                stream_config,
+                move |data: &[i16], _: &_| {
+                    if let Ok(mut buf) = buffer_clone.lock() {
+                        for &sample in data {
+                            buf.push(sample.to_sample::<f32>());
                         }
-                    },
-                    |err| eprintln!("Audio stream error: {}", err),
-                    None
-                )?
-            },
-            SampleFormat::I16 => {
-                device.build_input_stream(
-                    &stream_config,
-                    move |data: &[i16], _: &_| {
-                        if let Ok(mut buf) = buffer_clone.lock() {
-                            for &sample in data {
-                                buf.push(sample.to_sample::<f32>());
-                            }
+                    }
+                },
+                |err| eprintln!("Audio stream error: {}", err),
+                None,
+            ).map_err(|e| TempestError::AudioError(e.to_string()))?,
+            SampleFormat::U16 => device.build_input_stream(
+                stream_config,
+                move |data: &[u16], _: &_| {
+                    if let Ok(mut buf) = buffer_clone.lock() {
+                        for &sample in data {
+                            buf.push(sample.to_sample::<f32>());
                         }
-                    },
-                    |err| eprintln!("Audio stream error: {}", err),
-                    None
-                )?
-            },
-            SampleFormat::U16 => {
-                device.build_input_stream(
-                    &stream_config,
-                    move |data: &[u16], _: &_| {
-                        if let Ok(mut buf) = buffer_clone.lock() {
-                            for &sample in data {
-                                buf.push(sample.to_sample::<f32>());
-                            }
-                        }
-                    },
-                    |err| eprintln!("Audio stream error: {}", err),
-                    None
-                )?
-            },
-            _ => return Err(anyhow::anyhow!("Unsupported sample format: {:?}", sample_format)),
+                    }
+                },
+                |err| eprintln!("Audio stream error: {}", err),
+                None,
+            ).map_err(|e| TempestError::AudioError(e.to_string()))?,
+            _ => {
+                return Err(TempestError::AudioError(format!(
+                    "Unsupported sample format: {:?}",
+                    sample_format
+                )));
+            }
         };
 
-        stream.play()?;
+        stream.play().map_err(|e| TempestError::AudioError(e.to_string()))?;
         self.stream = Some(stream);
 
         Ok(())
     }
 
     pub fn stop_recording(&mut self) -> Vec<f32> {
-        self.stream = None; 
-        let mut buf = self.buffer.lock().expect("Failed to lock audio buffer for stopping");
+        self.stream = None;
+        let mut buf = self
+            .buffer
+            .lock()
+            .expect("Failed to lock audio buffer for stopping");
         let raw_data = buf.clone();
         buf.clear();
-        
+
         if raw_data.is_empty() {
             return Vec::new();
         }
@@ -120,13 +131,13 @@ impl AudioRecorder {
         } else {
             raw_data
         };
-        
+
         // 2. Simple Normalization & DC Offset removal (prevention of "audio explosions")
         let mean: f32 = mono_data.iter().sum::<f32>() / mono_data.len() as f32;
         for s in &mut mono_data {
             *s -= mean;
         }
-        
+
         // Find peak for normalization
         let max_abs = mono_data.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
         if max_abs > 0.0 {
@@ -135,17 +146,17 @@ impl AudioRecorder {
                 *s *= multiplier;
             }
         }
-        
+
         // 3. Resample to 16000 Hz using linear interpolation
         let target_rate = 16000.0;
         if (self.sample_rate as f32 - target_rate).abs() < 10.0 {
             return mono_data;
         }
-        
+
         let ratio = self.sample_rate as f32 / target_rate;
         let mut resampled = Vec::new();
         let mut float_index = 0.0;
-        
+
         while (float_index as usize) < mono_data.len() - 1 {
             let i = float_index as usize;
             let frac = float_index - i as f32;

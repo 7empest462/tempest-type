@@ -2,47 +2,57 @@
 // Licensed under the Tempest Type Source-Available License.
 // See the LICENSE file in the repository root for full details.
 
-use ollama_rs::Ollama;
-use ollama_rs::generation::chat::{ChatMessage, request::ChatMessageRequest};
+use ollama_rs::generation::chat::{request::ChatMessageRequest, ChatMessage};
 use ollama_rs::models::ModelOptions;
+use ollama_rs::Ollama;
 
-pub async fn cleanup_text(raw_text: &str, model: &str) -> anyhow::Result<String> {
-    let system_msg = "You are an ultra-conservative transcription-correction assistant.\n\n\
-                      CRITICAL RULES:\n\
-                      1. DO NOT REWRITE. RETAIN every single word from the raw input.\n\
-                      2. DO NOT change vocabulary, word order, or tone.\n\
-                      3. DO NOT expand, summarize, or explain.\n\
-                      4. Your ONLY task is to fix obvious speech-to-text spelling errors and add punctuation.\n\
-                      5. If the input is clear, return it EXACTLY as it is.\n\
-                      6. If the input is empty or nonsensical noise, return an EMPTY STRING.\n\
-                      7. NEVER use 'Thinking' blocks or meta-comments.";
-    
-    let user_msg = format!("Correct spelling only, keep all words: {}", raw_text);
+use crate::error::TempestError;
+
+pub async fn cleanup_text(raw_text: &str, model: &str) -> Result<String, TempestError> {
+    let system_msg = "You are a world-class professional editor and transcription specialist.\n\n\
+                      TASKS:\n\
+                      1. REWRITE the raw speech-to-text input into professional, clear, and perfectly punctuated English.\n\
+                      2. FIX transcription hallucinations: use context to infer intended words.\n\
+                      3. STRIP all non-speech artifacts: remove parenthetical sound descriptions like '(Air whooshing)', '(beep)', '(burp)', '[SOUND]', or '(upbeat music)'.\n\
+                      4. REMOVE all stutters, repetitions, and filler words (um, ah, like).\n\
+                      5. POLISH for professional flow: ensure sentences connect logically and elegantly.\n\
+                      6. CRITICAL: DO NOT alter the core meaning, vocabulary, or stylistic choices unnecessarily. Only fix grammar and stutters.\n\
+                      7. Return ONLY the refined, final text. NEVER include conversational filler, pleasantries, or introductory phrases like 'Here is the refined text:'. If the input is only noise or artifacts, return an empty string.";
+
+    let user_msg = format!(
+        "Please professionally refine this raw transcription: {}",
+        raw_text
+    );
 
     let ollama = Ollama::default();
-    
+
     let messages = vec![
         ChatMessage::system(system_msg.to_string()),
         ChatMessage::user(user_msg),
     ];
 
-    let options = ModelOptions::default()
-        .temperature(0.1)
-        .num_predict(500);
+    let options = ModelOptions::default().temperature(0.1).num_predict(500);
 
-    let request = ChatMessageRequest::new(model.to_string(), messages)
-        .options(options);
+    let request = ChatMessageRequest::new(model.to_string(), messages).options(options);
 
-    let res = ollama.send_chat_messages(request).await
-        .map_err(|e| anyhow::anyhow!("Ollama error: {}", e))?;
+    let res = ollama
+        .send_chat_messages(request)
+        .await
+        .map_err(|e| TempestError::OllamaError(e.to_string()))?;
 
     Ok(res.message.content.trim().to_string())
 }
 
-pub async fn summarize_memo(raw_text: &str, model: &str) -> anyhow::Result<String> {
-    let system_msg = "You are a professional assistant. Summarize meeting transcripts into clear bullet points and action items.\n\
-                      Output ONLY the summary. Do not use 'Thinking' blocks.";
-    
+pub async fn summarize_memo(raw_text: &str, model: &str) -> Result<String, TempestError> {
+    let system_msg = "You are a professional executive assistant. Your task is to summarize meeting transcripts into a structured, highly readable format.\n\n\
+                      FORMAT REQUIREMENTS:\n\
+                      - **Executive Summary**: A brief 1-3 sentence overview of the meeting's purpose and outcome.\n\
+                      - **Key Discussion Points**: A bulleted list of the main topics discussed.\n\
+                      - **Action Items**: A clear, actionable list of tasks and next steps (include assignees if mentioned).\n\n\
+                      RULES:\n\
+                      1. Output ONLY the formatted summary. Do not include introductory conversational filler like 'Here is the summary:'.\n\
+                      2. Do not use 'Thinking' blocks or output your internal reasoning.";
+
     let user_msg = format!("Summarize this: {}", raw_text);
 
     let ollama = Ollama::default();
@@ -52,15 +62,14 @@ pub async fn summarize_memo(raw_text: &str, model: &str) -> anyhow::Result<Strin
         ChatMessage::user(user_msg),
     ];
 
-    let options = ModelOptions::default()
-        .temperature(0.2)
-        .num_predict(1000);
+    let options = ModelOptions::default().temperature(0.2).num_predict(1000);
 
-    let request = ChatMessageRequest::new(model.to_string(), messages)
-        .options(options);
+    let request = ChatMessageRequest::new(model.to_string(), messages).options(options);
 
-    let res = ollama.send_chat_messages(request).await
-        .map_err(|e| anyhow::anyhow!("Ollama error: {}", e))?;
+    let res = ollama
+        .send_chat_messages(request)
+        .await
+        .map_err(|e| TempestError::OllamaError(e.to_string()))?;
 
     Ok(res.message.content.trim().to_string())
 }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>TempestType</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.tempest.type</string>
+    <key>CFBundleName</key>
+    <string>TempestType</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Tempest Type needs microphone access to dictate your speech.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Tempest Type needs accessibility access to type text for you.</string>
+</dict>
+</plist>

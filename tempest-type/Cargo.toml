@@ -2,25 +2,39 @@
 name = "tempest-type"
 version = "0.1.0"
 edition = "2024"
+authors = ["7empest462"]
+license = "BSL-1.0"
+repository = "https://github.com/7empest462/tempest-type"
+description = "AI Dictation Tool"
 
 [dependencies]
-anyhow = "1.0.102"
-chrono = { version = "0.4.44", features = ["clock"] }
-cpal = "0.17.3"
-arboard = "3.4.1"
-notify-rust = "4.11.5"
+thiserror = "2.0.18"
+chrono = { version = "0.4.45", features = ["clock"] }
+cpal = "0.18.1"
+arboard = "3.6.1"
+notify-rust = "4.18.0"
 rodio = "0.22.2"
-confy = "0.6.1"
-toml = "0.8.19"
+confy = "2.0.0"
+toml = "1.1.2+spec-1.1.0"
 dirs = "6.0.0"
 enigo = "0.6.1"
-image = "0.25.5"
-ollama-rs = "0.3.4"
+image = "0.25.10"
+ollama-rs = "0.3.5"
 rdev = "0.5.3"
-reqwest = { version = "0.13.2", features = ["json"] }
+reqwest = { version = "0.13.4", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-tao = "0.34.8"
-tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
-tray-icon = "0.21.3"
-whisper-rs = "0.16.0"
+serde_json = "1.0.150"
+tao = "0.35.3"
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros"] }
+tray-icon = "0.24.1"
+transcribe-rs = { version = "0.3.11", features = ["whisper-cpp", "whisperfile", "whisper-metal", "audio-features"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+debug-assertions = false
+debug = false
+overflow-checks = false
+rpath = false
