@@ -24,7 +24,7 @@ cat <<EOF > "$APP_DIR/Contents/Info.plist"
     <key>CFBundleExecutable</key>
     <string>$APP_NAME</string>
     <key>CFBundleIdentifier</key>
-    <string>com.tempest.type</string>
+    <string>com.tempest.type.stable</string>
     <key>CFBundleName</key>
     <string>$APP_NAME</string>
     <key>CFBundlePackageType</key>

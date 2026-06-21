@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>TempestType</string>
     <key>CFBundleIdentifier</key>
-    <string>com.tempest.type</string>
+    <string>com.tempest.type.stable</string>
     <key>CFBundleName</key>
     <string>TempestType</string>
     <key>CFBundlePackageType</key>

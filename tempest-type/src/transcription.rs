@@ -19,7 +19,7 @@ impl Transcriber {
         let model_path = Self::ensure_model_downloaded().await?;
 
         let engine = WhisperEngine::load(&model_path)
-            .map_err(|e| TempestError::TranscriptionError(e.to_string()))?;
+            .map_err(|e| TempestError::Transcription(e.to_string()))?;
 
         Ok(Self { engine })
     }
@@ -38,7 +38,7 @@ impl Transcriber {
         let result = self
             .engine
             .transcribe(&padded_audio, &opts)
-            .map_err(|e| TempestError::TranscriptionError(e.to_string()))?;
+            .map_err(|e| TempestError::Transcription(e.to_string()))?;
 
         Ok(result.text.trim().to_string())
     }
@@ -46,7 +46,7 @@ impl Transcriber {
     async fn ensure_model_downloaded() -> Result<PathBuf, TempestError> {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
         let model_dir = Path::new(&home).join(".tempest-type").join("models");
-        fs::create_dir_all(&model_dir).map_err(|e| TempestError::SystemError(e.to_string()))?;
+        fs::create_dir_all(&model_dir).map_err(|e| TempestError::System(e.to_string()))?;
 
         // ggml-small.en.bin
         let model_path = model_dir.join("ggml-small.en.bin");
@@ -56,10 +56,17 @@ impl Transcriber {
                 "Downloading Whisper model (ggml-small.en.bin), ~480MB. This may take a minute..."
             );
             let url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin";
-            let response = reqwest::get(url).await.map_err(|e| TempestError::SystemError(e.to_string()))?;
-            let mut file = fs::File::create(&model_path).map_err(|e| TempestError::SystemError(e.to_string()))?;
-            let bytes = response.bytes().await.map_err(|e| TempestError::SystemError(e.to_string()))?;
-            file.write_all(&bytes).map_err(|e| TempestError::SystemError(e.to_string()))?;
+            let response = reqwest::get(url)
+                .await
+                .map_err(|e| TempestError::System(e.to_string()))?;
+            let mut file =
+                fs::File::create(&model_path).map_err(|e| TempestError::System(e.to_string()))?;
+            let bytes = response
+                .bytes()
+                .await
+                .map_err(|e| TempestError::System(e.to_string()))?;
+            file.write_all(&bytes)
+                .map_err(|e| TempestError::System(e.to_string()))?;
             println!("Download complete!");
         }
 

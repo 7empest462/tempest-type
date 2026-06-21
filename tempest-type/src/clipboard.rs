@@ -6,10 +6,10 @@ use crate::error::TempestError;
 use arboard::Clipboard;
 
 pub fn copy_text(text: &str) -> Result<(), TempestError> {
-    let mut clipboard =
-        Clipboard::new().map_err(|e| TempestError::SystemError(format!("Failed to access clipboard: {}", e)))?;
+    let mut clipboard = Clipboard::new()
+        .map_err(|e| TempestError::System(format!("Failed to access clipboard: {}", e)))?;
     clipboard
         .set_text(text.to_owned())
-        .map_err(|e| TempestError::SystemError(format!("Failed to set clipboard text: {}", e)))?;
+        .map_err(|e| TempestError::System(format!("Failed to set clipboard text: {}", e)))?;
     Ok(())
 }

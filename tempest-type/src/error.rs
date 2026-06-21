@@ -3,17 +3,17 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum TempestError {
     #[error("Audio Error: {0}")]
-    AudioError(String),
-    
+    Audio(String),
+
     #[error("Transcription Error: {0}")]
-    TranscriptionError(String),
-    
+    Transcription(String),
+
     #[error("Ollama Error: {0}")]
-    OllamaError(String),
-    
+    Ollama(String),
+
     #[error("Configuration Error: {0}")]
-    ConfigError(String),
-    
+    Config(String),
+
     #[error("System Error: {0}")]
-    SystemError(String),
+    System(String),
 }

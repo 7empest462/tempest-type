@@ -2,9 +2,9 @@
 // Licensed under the Tempest Type Source-Available License.
 // See the LICENSE file in the repository root for full details.
 
+use crate::error::TempestError;
 use rdev::Key;
 use serde::{Deserialize, Serialize};
-use crate::error::TempestError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -31,8 +31,7 @@ impl Config {
 
     #[allow(dead_code)]
     pub fn save(&self) -> Result<(), TempestError> {
-        confy::store("tempest-type", None, self)
-            .map_err(|e| TempestError::ConfigError(e.to_string()))
+        confy::store("tempest-type", None, self).map_err(|e| TempestError::Config(e.to_string()))
     }
 
     pub fn get_target_key(&self) -> Key {

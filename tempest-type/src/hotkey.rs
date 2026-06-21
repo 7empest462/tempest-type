@@ -12,15 +12,26 @@ pub fn start_listener(proxy: tao::event_loop::EventLoopProxy<AppEvent>, target_k
     );
     std::thread::spawn(move || {
         let callback = move |event: Event| {
-            match event.event_type {
-                EventType::KeyPress(key) => {
-                    // Log all keys to debug if permissions are working
-                    // println!("DEBUG: Key pressed: {:?}", key);
+            let is_match = match event.event_type {
+                EventType::KeyPress(key) | EventType::KeyRelease(key) => {
                     if key == target_key {
-                        let _ = proxy.send_event(AppEvent::StartRecording(false));
+                        true
+                    } else if (target_key == rdev::Key::AltGr || target_key == rdev::Key::Alt) 
+                           && (key == rdev::Key::AltGr || key == rdev::Key::Alt) {
+                        // Mac keyboard quirk: Many keyboards send Left Option (Alt) even for the Right Option key
+                        true
+                    } else {
+                        false
                     }
                 }
-                EventType::KeyRelease(key) if key == target_key => {
+                _ => false,
+            };
+
+            match event.event_type {
+                EventType::KeyPress(_) if is_match => {
+                    let _ = proxy.send_event(AppEvent::StartRecording(false));
+                }
+                EventType::KeyRelease(_) if is_match => {
                     let _ = proxy.send_event(AppEvent::StopRecording);
                 }
                 _ => {}

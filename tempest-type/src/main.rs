@@ -51,8 +51,9 @@ struct AudioEngine {
 
 impl AudioEngine {
     fn new() -> Result<Self, TempestError> {
-        let _mixer = DeviceSinkBuilder::open_default_sink()
-            .map_err(|e| TempestError::SystemError(format!("Failed to open default audio sink: {}", e)))?;
+        let _mixer = DeviceSinkBuilder::open_default_sink().map_err(|e| {
+            TempestError::System(format!("Failed to open default audio sink: {}", e))
+        })?;
         let player = Player::connect_new(_mixer.mixer());
         Ok(Self { player, _mixer })
     }
@@ -110,7 +111,7 @@ fn run_app() -> Result<(), TempestError> {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
-        .map_err(|e| TempestError::SystemError(e.to_string()))?;
+        .map_err(|e| TempestError::System(e.to_string()))?;
 
     println!("Initiating Tempest Type...");
     println!("Initializing old conversations...");
@@ -129,7 +130,7 @@ fn run_app() -> Result<(), TempestError> {
     println!("📂 Loading Whisper model...");
     let transcriber = rt
         .block_on(transcription::Transcriber::new())
-        .map_err(|e| TempestError::TranscriptionError(e.to_string()))?;
+        .map_err(|e| TempestError::Transcription(e.to_string()))?;
     let transcriber = Arc::new(Mutex::new(transcriber));
     println!("✅ Whisper model loaded!");
 
@@ -216,7 +217,7 @@ fn run_app() -> Result<(), TempestError> {
     println!("🎨 Building tray icon...");
     let tray_icon = icon
         .build()
-        .map_err(|e| TempestError::SystemError(format!("Failed to build tray icon: {}", e)))?;
+        .map_err(|e| TempestError::System(format!("Failed to build tray icon: {}", e)))?;
     println!("✅ Tray icon built.");
 
     let mut audio_recorder = audio::AudioRecorder::new();
