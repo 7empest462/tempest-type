@@ -23,6 +23,8 @@ cat <<EOF > "$APP_DIR/Contents/Info.plist"
 <dict>
     <key>CFBundleExecutable</key>
     <string>$APP_NAME</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.tempest.type.stable</string>
     <key>CFBundleName</key>
@@ -41,8 +43,11 @@ cat <<EOF > "$APP_DIR/Contents/Info.plist"
 </plist>
 EOF
 
-echo "📦 Copying binary..."
+echo "📦 Copying binary and assets..."
 cp "target/release/$BIN_NAME" "$APP_DIR/Contents/MacOS/$APP_NAME"
+if [ -f "assets/AppIcon.icns" ]; then
+    cp "assets/AppIcon.icns" "$APP_DIR/Contents/Resources/AppIcon.icns"
+fi
 
 echo "🔐 Signing application bundle..."
 codesign --force --deep --sign - "$APP_DIR"

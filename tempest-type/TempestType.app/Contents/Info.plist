@@ -4,6 +4,8 @@
 <dict>
     <key>CFBundleExecutable</key>
     <string>TempestType</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.tempest.type.stable</string>
     <key>CFBundleName</key>
